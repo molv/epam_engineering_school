@@ -1,0 +1,18 @@
+---
+- hosts: all
+  tasks:
+
+    - name: Copy kernel packages
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /home/molv/
+      with_fileglob:
+        - "/home/molvinec/epam/kernel/linux-*epam-lrn-1_amd64.deb"
+
+    - name: Install kernel packages
+      apt:
+        deb: "{{ item }}"
+      with_items:
+        - /home/molv/linux-headers-5.17.5-epam-lrn_5.17.5-epam-lrn-1_amd64.deb
+        - /home/molv/linux-image-5.17.5-epam-lrn_5.17.5-epam-lrn-1_amd64.deb
+      become: yes
