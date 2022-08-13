@@ -1,0 +1,16 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+
+    - name: Disable password auth
+      ansible.builtin.replace:
+        path: /etc/ssh/sshd_config
+        regexp: 'PasswordAuthentication yes'
+        replace: 'PasswordAuthentication no'
+      notify:
+        - restart sshd
+
+  handlers:
+    - name: restart sshd
+      service: name=sshd state=restarted
