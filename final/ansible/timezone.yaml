@@ -1,0 +1,8 @@
+---
+- hosts: all
+  tasks:
+    - name: Set timezone to Europe/Moscow
+      community.general.timezone:
+        name: Europe/Moscow
+        hwclock: local
+      become: yes
