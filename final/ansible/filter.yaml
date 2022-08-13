@@ -1,0 +1,246 @@
+- hosts: all
+  become: yes
+  tasks:
+
+    - name: Allow ntp
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: udp
+        source_port: 123
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+
+    - name: Allow SSH connection from admin host
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: enp0s3
+        protocol: tcp
+        destination_port: 22
+        source: 192.168.1.229
+        jump: ACCEPT
+
+
+    - name: Allow dns tcp
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 53
+        jump: ACCEPT
+
+
+    - name: Allow dns udp
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: udp
+        destination_port: 53
+        jump: ACCEPT
+
+
+    - name: Allow dns udp2
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: udp
+        source_port: 53
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+
+    - name: Allow dsn tcp2
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 53
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+
+    - name: Allow ICMP
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: icmp
+        jump: ACCEPT
+
+
+    - name: Allow lo
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: lo
+        protocol: all
+        jump: ACCEPT
+
+    - name: Allow lo ipv6
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: lo
+        ip_version: ipv6
+        protocol: all
+        jump: ACCEPT
+
+    - name: Allow http
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 80
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+
+    - name: Allow https
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 443
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+    - name: Allow dns udp
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: udp
+        destination_port: 53
+        jump: ACCEPT
+
+    - name: Allow prometheus node exporter
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 9100
+        jump: ACCEPT
+
+    - name: Allow from prometheus pushgateway
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 9091
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+    - name: Allow related and established connections
+      ansible.builtin.iptables:
+        chain: INPUT
+        ctstate: ESTABLISHED,RELATED
+        jump: ACCEPT
+
+    #- name: Allow prometheus node exporter ipv6
+      #ansible.builtin.iptables:
+        #chain: INPUT
+        #protocol: tcp
+        #ip_version: ipv6
+        #destination_port: 9100
+        #jump: ACCEPT
+
+    - name: Set default input policy
+      ansible.builtin.iptables:
+        chain: INPUT
+        policy: DROP
+
+    - name: Set default input policy ipv6
+      ansible.builtin.iptables:
+        chain: INPUT
+        ip_version: ipv6
+        policy: DROP
+
+    - name: install iptables-persistent
+      apt:
+        update_cache: yes
+        name: iptables-persistent
+        state: present
+
+
+    - name: install net-tools
+      apt:
+        name: net-tools
+        state: present
+
+
+- hosts: db
+  become: yes
+  tasks:
+    - name: Allow postgres
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 5432
+        jump: ACCEPT
+
+
+- hosts: web
+  become: yes
+  tasks:
+    - name: Allow web
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: enp0s10
+        protocol: tcp
+        destination_ports:
+            - "80"
+            - "443"
+        jump: ACCEPT
+
+    - name: Allow postgres client
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 5432
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+    - name: Allow prometheus server
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 9090
+        jump: ACCEPT
+
+    - name: Allow prometheus pushgateway
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 9091
+        jump: ACCEPT
+
+    #- name: Allow prometheus server ipv6
+      #ansible.builtin.iptables:
+        #chain: INPUT
+        #protocol: tcp
+        #ip_version: ipv6
+        #destination_port: 9090
+        #jump: ACCEPT
+
+    - name: Allow grafana
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 3000
+        jump: ACCEPT
+
+    - name: Allow prometheus node from agents
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        source_port: 9100
+        destination_port: 1024:65535
+        jump: ACCEPT
+
+    - name: Allow kibana web interface
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 5601
+        in_interface: enp0s10
+        jump: ACCEPT
+
+- hosts: all
+  become: yes
+  tasks:
+    - name: Save current state of the firewall, v4
+      community.general.iptables_state:
+        state: saved
+        path: /etc/iptables/rules.v4
+
+    - name: Save current state of the firewall, v6
+      community.general.iptables_state:
+        state: saved
+        ip_version: ipv6
+        path: /etc/iptables/rules.v6

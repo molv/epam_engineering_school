@@ -1,0 +1,76 @@
+- hosts: db
+  become: yes
+  tasks:
+    - name: Template for enp0s9
+      vars:
+        int_num: 9
+        to_subnet: 172.16.3.0/30
+        via_router: 172.16.2.1
+        opt_flag: 'no'
+        int_address: 172.16.2.2/30
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s9.yaml
+
+    - name: Template for enp0s8
+      vars:
+        int_num: 8
+        opt_flag: 'yes'
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s8.yaml
+
+    - name: Template for enp0s10
+      vars:
+        int_num: 10
+        opt_flag: 'yes'
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s10.yaml
+
+- hosts: web
+  become: yes
+  tasks:
+    - name: Template for enp0s9
+      vars:
+        int_num: 9
+        opt_flag: 'yes'
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s9.yaml
+
+    - name: Template for enp0s8
+      vars:
+        int_num: 8
+        to_subnet: 172.16.2.0/30
+        via_router: 172.16.3.1
+        opt_flag: 'no'
+        int_address: 172.16.3.2/30
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s8.yaml
+
+    - name: Template for enp0s10
+      vars:
+        int_num: 10
+        opt_flag: 'no'
+        int_address: 10.10.10.2/30
+      ansible.builtin.template:
+        src: /home/molvinec/epam/final/ansible/net_conf/enp0s.j2
+        dest: /etc/netplan/enp0s10.yaml
+
+- hosts: router
+  become: yes
+  tasks:
+    - ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+- hosts: all
+  become: yes
+  tasks:
+        - name: apply interfaces config
+          raw: netplan apply

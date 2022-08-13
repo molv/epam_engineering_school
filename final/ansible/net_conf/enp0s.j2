@@ -1,0 +1,15 @@
+network:
+  ethernets:
+    enp0s{{ int_num }}:
+      dhcp4: false
+      optional: {{ opt_flag }}
+{% if opt_flag=='no' %}
+      addresses:
+      - {{ int_address }}
+{% endif %}
+{% if via_router is defined %}
+      routes:
+      - to: {{ to_subnet }}
+        via: {{ via_router }}
+{% endif %}
+  version: 2
