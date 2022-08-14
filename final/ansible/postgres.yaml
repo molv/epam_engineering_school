@@ -1,6 +1,29 @@
 ---
 - hosts: db
   tasks:
+    - name: install deps and pgsql repo
+      apt:
+        update_cache: yes
+        pkg:
+            - curl
+            - ca-certificates
+            - gnupg
+        state: present
+      become: yes
+
+    - name: add psql repo
+      raw: curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+      become: yes
+      #args:
+       # warn: no
+
+    - name: install pgsql
+      apt:
+        update_cache: yes
+        name: postgresql-14
+        state: present
+      become: yes
+
     - name: create database
       community.postgresql.postgresql_db:
         name: epam
