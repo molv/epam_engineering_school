@@ -1,0 +1,82 @@
+---
+- hosts: db
+  tasks:
+    - name: create database
+      community.postgresql.postgresql_db:
+        name: epam
+        login_user: postgres
+        login_password: pg-pass123
+        encoding: UTF-8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        template: template0
+        conn_limit: "15"
+
+    - name: create table 'magazines', 'article_types', 'author'
+      community.postgresql.postgresql_query:
+        db: epam
+        login_user: postgres
+        login_password: pg-pass123
+        query: CREATE TABLE IF NOT EXISTS magazines(id SERIAL PRIMARY KEY, name TEXT); CREATE TABLE IF NOT EXISTS article_types(id SERIAL PRIMARY KEY, type TEXT); CREATE TABLE IF NOT EXISTS author(id SERIAL PRIMARY KEY, author TEXT);
+        as_single_query: yes
+
+   - name: Copy author.csv
+     ansible.builtin.copy:
+       src: author.csv
+       dest: /tmp
+       mode: '755'
+
+   - name: Import from author.csv
+     community.postgresql.postgresql_copy:
+       db: epam
+       login_user: postgres
+       login_password: pg-pass123
+       copy_from: /tmp/author.csv
+       dst: author
+       columns: id,author
+       options:
+           format: csv
+
+    - name: create table 'Articles' with FK
+      community.postgresql.postgresql_query:
+        db: epam
+        login_user: postgres
+        login_password: pg-pass123
+        query: CREATE TABLE IF NOT EXISTS Articles(id SERIAL PRIMARY KEY, magazines_id INTEGER, article_type_id INTEGER, author_id INTEGER, FOREIGN KEY (magazines_id) REFERENCES magazines (id), FOREIGN KEY (article_type_id) REFERENCES article_types (id), FOREIGN KEY (author_id) REFERENCES author (id));
+        as_single_query: yes
+
+    - name: Copy articles.csv
+      ansible.builtin.copy:
+        src: articles.csv
+        dest: /tmp
+        mode: '755'
+
+    - name: Import from articles.csv
+      community.postgresql.postgresql_copy:
+        db: epam
+        login_user: postgres
+        login_password: pg-pass123
+        copy_from: /tmp/articles.csv
+        dst: articles
+        columns: id,magazines_id,article_type_id,author_id
+        options:
+            format: csv
+
+    - name: create user for prod
+      community.postgresql.postgresql_user:
+        login_user: postgres
+        login_password: pg-pass123
+        name: prod_user
+        password: epam_123
+        state: present
+
+    - name: grant acces to prod_user
+      community.postgresql.postgresql_privs:
+        login_user: postgres
+        login_password: pg-pass123
+        state: present
+        database: epam
+        privs: SELECT,INSERT,UPDATE
+        role: prod_user
+        schema: public
+        objs: ALL_IN_SCHEMA
